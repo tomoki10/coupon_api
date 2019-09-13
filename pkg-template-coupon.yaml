@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Coupon Infomation GET API.
+Resources:
+  GetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.get
+      Runtime: python3.7
+      Policies: AmazonDynamoDBReadOnlyAccess
+      CodeUri: s3://coupon-api-dev/935a4fc79f569e451ed69036c18ce392
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: Table
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: GetApi
+            Path: /resource/{resourceId}
+            Method: get
+  GetApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      TracingEnabled: true
+      CacheClusterEnabled: true
+      CacheClusterSize: '0.5'
+  Table:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: COUPON_INFO
+      PrimaryKey:
+        Name: id
+        Type: String
