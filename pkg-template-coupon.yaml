@@ -1,16 +1,28 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Coupon Infomation GET API.
+Parameters:
+  Env:
+    Type: String
+    Default: local
+  DynamoDBEndpoint:
+    Type: String
+    Default: https://dynamodb.ap-northeast-1.amazonaws.com/
 Resources:
   GetFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: index.get
+      Handler: src/functions/index.get
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/935a4fc79f569e451ed69036c18ce392
+      CodeUri: s3://coupon-api-dev/3843c21def70363f3e5b747f689296fd
+      Timeout: 30
       Environment:
         Variables:
+          ENV:
+            Ref: Env
+          DYNAMODB_ENDPOINT:
+            Ref: DynamoDBEndpoint
           TABLE_NAME:
             Ref: Table
       Events:

@@ -1,0 +1,6 @@
+{
+  "GetFunction": {
+    "DYNAMODB_ENDPOINT": "http://localstack:4569/",
+    "TABLE_NAME": "COUPON_INFO"
+  }
+}
