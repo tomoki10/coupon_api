@@ -1,5 +1,4 @@
 #!/usr/bin/env bats
- 
 
 setup() {
     echo "setup"
@@ -24,12 +23,10 @@ teardown() {
     aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${data}"
  
     # SAM Local を起動し、Lambda Function の出力を得る
-    actual=`sam local invoke --docker-network ${docker_name} -t pkg-template-coupon.yaml --event tests/integrations/get_payload.json --env-vars environments/sam-local.json GetFunction | jq -r .`
+    actual=`sam local invoke --docker-network ${docker_name} -t pkg-template-coupon.yaml --event tests/integrations/get_payload.json --env-vars environments/sam-local.json GetFunction | jq -r .body `
 
     #テスト用コマンド
-    #echo $actual
-    #echo `echo "${actual}" | jq .title` 
-    #echo `echo "${expected}" | jq .title.S`
+    #echo `echo "${actual}"` 
 
     # 出力内容をテスト
     [ `echo "${actual}" | jq .id` = `echo "${expected}" | jq .id.S` ]

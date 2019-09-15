@@ -1,3 +1,6 @@
 {
-  "id": "test-id"
+  "pathParameters" :
+  {
+    "resourceId":"test-id"
+  }
 }

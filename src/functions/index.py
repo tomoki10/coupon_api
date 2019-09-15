@@ -16,15 +16,16 @@ DYNAMODB_TABLE = DYNAMO.Table(TABLE_NAME)
 
 def get(event, context):
     try:
-        id = event['id']
+        id = event['pathParameters']['resourceId']
         print(DYNAMO)
         dynamo_response = DYNAMODB_TABLE.get_item(
             Key={
                 "id": id
             }
         )
-        print(dynamo_response)
-        response = json.dumps(dynamo_response['Item'])
-        return response
+        return {
+            'statusCode': 200,
+            'body': json.dumps(dynamo_response['Item'])
+        }
     except Exception as error:
         raise error

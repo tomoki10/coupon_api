@@ -12,10 +12,10 @@ Resources:
   GetFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/functions/index.get
+      Handler: index.get
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/3843c21def70363f3e5b747f689296fd
+      CodeUri: s3://coupon-api-dev/b2b7dd1b9a091b87b0236b520ce0f3ef
       Timeout: 30
       Environment:
         Variables:
