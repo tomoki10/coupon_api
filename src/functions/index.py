@@ -25,7 +25,7 @@ def get(event, context):
         )
         return {
             'statusCode': 200,
-            'body': json.dumps(dynamo_response['Item'])
+            'body': str(dynamo_response['Item']).replace("\'","\"")
         }
     except Exception as error:
         raise error

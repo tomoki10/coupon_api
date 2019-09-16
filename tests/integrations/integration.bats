@@ -13,9 +13,9 @@ teardown() {
 @test "DynamoDB Get Function response the correct item" {
     # テストデータを用意
     data='{
-        "id": {"S": "test-id"},
-        "title": {"S": "test-title"},
-        "text": {"S": "xxxxxxxxxxxxxxx"} }'
+        "id": {"S": "0001245"},
+        "title": {"S": "【秋葉原店】全商品 10% OFF！"},
+        "descriptive_text": {"S": "ご利用一回限り。他のクーポンとの併用はできません。クーポンをご利用いただいた場合、ポイントはつきません。"} }'
 
     expected=`echo "${data}" | jq -r .`
     echo $DOCKER_NAME
@@ -25,11 +25,12 @@ teardown() {
     # SAM Local を起動し、Lambda Function の出力を得る
     actual=`sam local invoke --docker-network ${docker_name} -t pkg-template-coupon.yaml --event tests/integrations/get_payload.json --env-vars environments/sam-local.json GetFunction | jq -r .body `
 
-    #テスト用コマンド
-    #echo `echo "${actual}"` 
+    #出力確認用コマンド
+    #echo `echo "${actual}" | jq .`
+    #echo `echo "${expected}" | jq .`
 
-    # 出力内容をテスト
-    [ `echo "${actual}" | jq .id` = `echo "${expected}" | jq .id.S` ]
-    [ `echo "${actual}" | jq .title` = `echo "${expected}" | jq .title.S` ]
-    [ `echo "${actual}" | jq .text` = `echo "${expected}" | jq .text.S` ]
+    # 出力内容をテスト(空白文字比較のためdouble bracket、bash,zsh,Korn shellで有効)
+    [[ `echo "${actual}" | jq .id` = `echo "${expected}" | jq .id.S` ]]
+    [[ `echo "${actual}" | jq .title` = `echo "${expected}" | jq .title.S` ]]
+    [[ `echo "${actual}" | jq .text` = `echo "${expected}" | jq .text.S` ]]
 }
