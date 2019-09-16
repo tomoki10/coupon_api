@@ -1,5 +1,2 @@
 #パッケージング前のtemplateファイルを省く
 template_coupon.yaml
-
-#作成中
-deploy.sh
