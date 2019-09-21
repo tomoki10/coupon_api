@@ -12,10 +12,10 @@ Resources:
   GetFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/functions/index.get
+      Handler: src/functions/index.getResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/9dbf27f726ea5e5a4e32585f7945df8d
+      CodeUri: s3://coupon-api-dev/7a722bb6b72dd8568662ca7412381b43
       Timeout: 30
       Environment:
         Variables:
@@ -24,7 +24,7 @@ Resources:
           DYNAMODB_ENDPOINT:
             Ref: DynamoDBEndpoint
           TABLE_NAME:
-            Ref: Table
+            Ref: CouponInfoTable
       Events:
         GetResource:
           Type: Api
@@ -33,6 +33,33 @@ Resources:
               Ref: GetApi
             Path: /resource/{resourceId}
             Method: get
+  TransportTablePutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/functions/transport.putTitle
+      Runtime: python3.7
+      Policies: AWSLambdaDynamoDBExecutionRole
+      CodeUri: s3://coupon-api-dev/7a722bb6b72dd8568662ca7412381b43
+      Timeout: 30
+      Environment:
+        Variables:
+          ENV:
+            Ref: Env
+          DYNAMODB_ENDPOINT:
+            Ref: DynamoDBEndpoint
+          TABLE_NAME:
+            Ref: CouponTitleTable
+      Events:
+        PutTitle:
+          Type: DynamoDB
+          Properties:
+            Stream:
+              Fn::GetAtt:
+              - CouponInfoTable
+              - StreamArn
+            StartingPosition: LATEST
+            BatchSize: 1
+            Enabled: true
   GetApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -40,10 +67,25 @@ Resources:
       TracingEnabled: true
       CacheClusterEnabled: true
       CacheClusterSize: '0.5'
-  Table:
-    Type: AWS::Serverless::SimpleTable
+  CouponInfoTable:
+    Type: AWS::DynamoDB::Table
     Properties:
       TableName: COUPON_INFO
+      AttributeDefinitions:
+      - AttributeName: id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+  CouponTitleTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: COUPON_TITLE
       PrimaryKey:
-        Name: id
+        Name: title_part
         Type: String

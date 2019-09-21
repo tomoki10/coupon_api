@@ -14,7 +14,7 @@ DYNAMO = boto3.resource(
 )
 DYNAMODB_TABLE = DYNAMO.Table(TABLE_NAME)
 
-def get(event, context):
+def getResource(event, context):
     try:
         id = event['pathParameters']['resourceId']
         print(DYNAMO)
