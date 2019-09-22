@@ -1,0 +1,18 @@
+{
+  "Records": [ {
+    "eventName":"MODIFY",
+    "dynamodb": {
+      "Keys":{
+        "id": { "S": "0001245" }
+      },
+      "OldImage": {
+        "title": { "S": "【秋葉原店】全商品無料" },
+        "id": { "S": "0001245" }
+      },
+      "NewImage": {
+        "title": { "S": "【秋葉原店】全商品10%OFF" },
+        "id": { "S": "0001245" }
+      }
+    }
+  } ]
+}

@@ -38,9 +38,9 @@ def putTitle(event, context):
             insert_new_item(new_images)
         elif (record['eventName'] == 'REMOVE'):
             remove_item(record['dynamodb']['Keys']['id']['S'])
-        #elif (record['eventName'] == 'MODIFY'):
-            #remove_item(record['dynamodb']['Keys']['id']['S'])
-            #insert_new_item(new_images)
+        elif (record['eventName'] == 'MODIFY'):
+            remove_item(record['dynamodb']['Keys']['id']['S'])
+            insert_new_item(new_images)
     return 'Done'
 
 def insert_new_item(new_images):

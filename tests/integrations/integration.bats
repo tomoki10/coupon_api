@@ -23,7 +23,7 @@ teardown() {
     aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${data}"
 
     # SAM Local を起動し、Lambda Function の出力を得る
-    actual=`sam local invoke --docker-network ${docker_name} -t pkg-template-coupon.yaml --event tests/integrations/get_payload.json --env-vars environments/sam-local.json GetFunction | jq -r .body `
+    actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/index/get_payload.json --env-vars environments/sam-local.json GetFunction | jq -r .body `
 
     #出力確認用コマンド
     #echo `echo "${actual}" | jq .`
@@ -36,18 +36,31 @@ teardown() {
 }
 
 @test "DynamoDB Transport Index Function correct item insert" {
-    # テストデータを用意
-    data='{
-      "Records": [ {
-        "dynamodb": {
-          "NewImage": {
-            "title_part": { "S": "【秋葉原店】全商品無料" },
-            "id": { "S": "0001245" }
-          }
-        }
-      } ]
-    }'
+    # テストデータ(put_payload.json)
 
     # 転置インデックステーブルにデータを登録
-    actual=`sam local invoke --docker-network ${docker_name} -t pkg-template-coupon.yaml --event tests/integrations/put_payload.json --env-vars environments/sam-local.json TransportTablePutFunction | jq -r .body `
+    actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/transport/put_payload.json --env-vars environments/sam-local.json TransportTablePutFunction`
+
+    [[ `echo "${actual}" ` = `echo \"Done\"` ]]
+}
+
+@test "DynamoDB Transport Index Function correct item remove" {
+    # テストデータ(delete_payload.json)
+
+    # データの挿入
+    sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/transport/put_payload.json --env-vars environments/sam-local.json TransportTablePutFunction
+
+    # データの削除
+    actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/transport/delete_payload.json --env-vars environments/sam-local.json TransportTablePutFunction`
+
+    [[ `echo "${actual}" ` = `echo \"Done\"` ]]
+}
+
+@test "DynamoDB Transport Index Function correct item modify" {
+    # テストデータ(modify_payload.json)
+
+    # データの修正
+    actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/transport/modify_payload.json --env-vars environments/sam-local.json TransportTablePutFunction`
+
+    [[ `echo "${actual}" ` = `echo \"Done\"` ]]
 }
