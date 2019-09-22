@@ -9,4 +9,16 @@ aws --endpoint-url=http://localhost:4569 dynamodb \
     --attribute-definitions \
         AttributeName=id,AttributeType=S \
     --key-schema AttributeName=id,KeyType=HASH \
-    --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1
+    --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5
+
+# 擬似の転置インデックステーブルを作成
+aws --endpoint-url=http://localhost:4569 dynamodb \
+    create-table --table-name  COUPON_TITLE \
+    --attribute-definitions \
+        AttributeName=title_part,AttributeType=S \
+        AttributeName=coupon_info_id,AttributeType=S \
+    --key-schema \
+        AttributeName=title_part,KeyType=HASH \
+        AttributeName=coupon_info_id,KeyType=RANGE \
+    --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
+    --global-secondary-indexes IndexName=coupon_info_id_index,KeySchema="[{AttributeName=coupon_info_id,KeyType=HASH},{AttributeName=title_part,KeyType=RANGE}],Projection={ProjectionType=KEYS_ONLY},ProvisionedThroughput={ReadCapacityUnits=5,WriteCapacityUnits=5}"

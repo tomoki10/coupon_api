@@ -1,0 +1,11 @@
+{
+  "Records": [ {
+    "eventName":"INSERT",
+    "dynamodb": {
+      "NewImage": {
+        "title": { "S": "【秋葉原店】全商品無料" },
+        "id": { "S": "0001245" }
+      }
+    }
+  } ]
+}

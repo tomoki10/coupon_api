@@ -15,7 +15,7 @@ Resources:
       Handler: src/functions/index.getResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/7a722bb6b72dd8568662ca7412381b43
+      CodeUri: s3://coupon-api-dev/497edf2f5b1e1f733de204b88fd5b2a5
       Timeout: 30
       Environment:
         Variables:
@@ -39,7 +39,7 @@ Resources:
       Handler: src/functions/transport.putTitle
       Runtime: python3.7
       Policies: AWSLambdaDynamoDBExecutionRole
-      CodeUri: s3://coupon-api-dev/7a722bb6b72dd8568662ca7412381b43
+      CodeUri: s3://coupon-api-dev/497edf2f5b1e1f733de204b88fd5b2a5
       Timeout: 30
       Environment:
         Variables:
@@ -47,8 +47,10 @@ Resources:
             Ref: Env
           DYNAMODB_ENDPOINT:
             Ref: DynamoDBEndpoint
-          TABLE_NAME:
+          TABLE_NAME_TITLE:
             Ref: CouponTitleTable
+          TABLE_NAME_INFO:
+            Ref: CouponInfoTable
       Events:
         PutTitle:
           Type: DynamoDB
@@ -60,6 +62,8 @@ Resources:
             StartingPosition: LATEST
             BatchSize: 1
             Enabled: true
+      Layers:
+      - Ref: TransportLambdaLayer
   GetApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -67,6 +71,14 @@ Resources:
       TracingEnabled: true
       CacheClusterEnabled: true
       CacheClusterSize: '0.5'
+  TransportLambdaLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: MecabLayer
+      Description: Mecab (Morphological analysis) Layer
+      ContentUri: s3://coupon-api-dev/d1aee9d5e60f3e57565c85a9d68c64d0
+      LicenseInfo: MIT
+      RetentionPolicy: Delete
   CouponInfoTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -83,9 +95,31 @@ Resources:
       StreamSpecification:
         StreamViewType: NEW_IMAGE
   CouponTitleTable:
-    Type: AWS::Serverless::SimpleTable
+    Type: AWS::DynamoDB::Table
     Properties:
       TableName: COUPON_TITLE
-      PrimaryKey:
-        Name: title_part
-        Type: String
+      AttributeDefinitions:
+      - AttributeName: title_part
+        AttributeType: S
+      - AttributeName: coupon_info_id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: title_part
+        KeyType: HASH
+      - AttributeName: coupon_info_id
+        KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      GlobalSecondaryIndexes:
+      - IndexName: coupon_info_id_index
+        KeySchema:
+        - AttributeName: coupon_info_id
+          KeyType: HASH
+        - AttributeName: title_part
+          KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        Projection:
+          ProjectionType: KEYS_ONLY

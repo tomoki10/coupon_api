@@ -1,2 +1,4 @@
 #パッケージング前のtemplateファイルを省く
 template_coupon.yaml
+deploylayer/
+deploy/

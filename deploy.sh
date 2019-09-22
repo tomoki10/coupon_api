@@ -4,7 +4,10 @@ item='coupon'
 bucket='coupon-api-dev'
 
 mkdir deploy
-cp -R src deploy
+rsync -a src deploy --exclude 'layer'
+mkdir deploylayer
+cp -R src/layer/* deploylayer
+cp -R src/layer/. deploylayer
 
 # CloudFormation テンプレート作成
 aws cloudformation package \
@@ -19,3 +22,4 @@ aws cloudformation deploy \
     --capabilities CAPABILITY_IAM
 
 rm -r deploy/
+rm -r deploylayer/
