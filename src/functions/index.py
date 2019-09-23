@@ -28,7 +28,11 @@ def getResource(event, context):
         )
         return {
             'statusCode': 200,
-            'body': str(dynamo_response['Item']).replace("\'","\"")
+            'headers': {
+              'Content-Type': 'application/json; charset=utf-8'
+            },
+            'body': str(dynamo_response['Item']).replace("\'","\""),
+            'isBase64Encoded': False
         }
     except Exception as error:
         raise error

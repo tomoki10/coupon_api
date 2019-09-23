@@ -40,9 +40,11 @@ def getTitleResource(event, context):
 
         return {
             'statusCode': 200,
-            #レスポンス方法だけ修正
-            'body': str(response).replace("\'","\"")
-            #'body': str(dynamo_response['Items']).replace("\'","\"")
+            'headers': {
+              'Content-Type': 'application/json; charset=utf-8'
+            },
+            'body': str(response).replace("\'","\""),
+            'isBase64Encoded': False
         }
     except Exception as error:
         raise error
