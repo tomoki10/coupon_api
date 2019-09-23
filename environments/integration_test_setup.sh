@@ -3,6 +3,12 @@
 # ローカルテスト用のDockerを起動
 docker-compose -f ../docker-compose.yaml up -d
 
+mkdir deploy
+rsync -a src deploy --exclude 'layer'
+mkdir deploylayer
+cp -R src/layer/* deploylayer
+cp -R src/layer/. deploylayer
+
 # 擬似テーブル作成(templateと一緒に修正が必要)
 aws --endpoint-url=http://localhost:4569 dynamodb \
     create-table --table-name  COUPON_INFO \

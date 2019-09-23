@@ -4,6 +4,12 @@ setup() {
     echo "setup"
     # Docker名を指定(docker_composeファイルの場所と連動)
     docker_name='coupon_api_default'
+    # テストデータを用意
+    data='{
+        "id": {"S": "0001245"},
+        "title": {"S": "【秋葉原店】全商品 10% OFF！"},
+        "descriptive_text": {"S": "ご利用一回限り。他のクーポンとの併用はできません。クーポンをご利用いただいた場合、ポイントはつきません。"} }'
+    data_id="0001245"
 }
 
 teardown() {
@@ -11,11 +17,6 @@ teardown() {
 }
 
 @test "DynamoDB Get Function response the correct item" {
-    # テストデータを用意
-    data='{
-        "id": {"S": "0001245"},
-        "title": {"S": "【秋葉原店】全商品 10% OFF！"},
-        "descriptive_text": {"S": "ご利用一回限り。他のクーポンとの併用はできません。クーポンをご利用いただいた場合、ポイントはつきません。"} }'
 
     expected=`echo "${data}" | jq -r .`
     echo $DOCKER_NAME
@@ -63,4 +64,31 @@ teardown() {
     actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/transport/modify_payload.json --env-vars environments/sam-local.json TransportTablePutFunction`
 
     [[ `echo "${actual}" ` = `echo \"Done\"` ]]
+}
+
+@test "API Gateway End to End test  Get Function response" {
+    # ローカルAPI Gatewayサーバの起動
+    if [ `lsof -i :4000` = "" ]; then
+      sam local start-api -p 4000 -t template_coupon.yaml --docker-network ${docker_name} --env-vars environments/sam-local.json
+      api_server_flag="ON"
+    else
+      echo "Please Stop the process of port 4000: port check ex(MaxOS). lsof -i :4000"
+      api_server_flag="OFF"
+    fi
+
+    expected=`echo "${data}" | jq -r .`
+
+    aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${data}"
+
+    # curlでレスポンスを取得
+    actual=`curl -H "Content-type: application/json" -X GET http://127.0.0.1:4000/resource/${data_id} | jq `
+
+    [[ `echo "${actual}" | jq .id` = `echo "${expected}" | jq .id.S` ]]
+    [[ `echo "${actual}" | jq .title` = `echo "${expected}" | jq .title.S` ]]
+    [[ `echo "${actual}" | jq .text` = `echo "${expected}" | jq .text.S` ]]
+
+    # APIサーバを終了
+    if [ api_server_flag="ON" ]; then
+      ps ax | grep 'sam local start-api -p 4000' | grep -v grep | cut -f1 -d " " | xargs kill -9
+    fi
 }

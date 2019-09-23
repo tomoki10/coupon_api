@@ -1,12 +1,17 @@
 {
   "GetFunction": {
     "DYNAMODB_ENDPOINT": "http://localstack:4569/",
-    "TABLE_NAME": "COUPON_INFO"
+    "TABLE_NAME_TITLE": "COUPON_TITLE",
+    "TABLE_NAME_INFO": "COUPON_INFO"
   },
   "TransportTablePutFunction": {
     "DYNAMODB_ENDPOINT": "http://localstack:4569/",
     "TABLE_NAME_TITLE": "COUPON_TITLE",
     "TABLE_NAME_INFO": "COUPON_INFO"
-  }
-
+  },
+  "GetTitleFunction": {
+     "DYNAMODB_ENDPOINT": "http://localstack:4569/",
+     "TABLE_NAME_TITLE": "COUPON_TITLE",
+     "TABLE_NAME_INFO": "COUPON_INFO"
+   }
 }

@@ -15,7 +15,7 @@ Resources:
       Handler: src/functions/index.getResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/497edf2f5b1e1f733de204b88fd5b2a5
+      CodeUri: s3://coupon-api-dev/ee4473c88b7d9e940d765e64762d64f1
       Timeout: 30
       Environment:
         Variables:
@@ -23,7 +23,9 @@ Resources:
             Ref: Env
           DYNAMODB_ENDPOINT:
             Ref: DynamoDBEndpoint
-          TABLE_NAME:
+          TABLE_NAME_TITLE:
+            Ref: CouponTitleTable
+          TABLE_NAME_INFO:
             Ref: CouponInfoTable
       Events:
         GetResource:
@@ -38,8 +40,11 @@ Resources:
     Properties:
       Handler: src/functions/transport.putTitle
       Runtime: python3.7
-      Policies: AWSLambdaDynamoDBExecutionRole
-      CodeUri: s3://coupon-api-dev/497edf2f5b1e1f733de204b88fd5b2a5
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: CouponTitleTable
+      CodeUri: s3://coupon-api-dev/ee4473c88b7d9e940d765e64762d64f1
       Timeout: 30
       Environment:
         Variables:
@@ -69,14 +74,12 @@ Resources:
     Properties:
       StageName: prod
       TracingEnabled: true
-      CacheClusterEnabled: true
-      CacheClusterSize: '0.5'
   TransportLambdaLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
       LayerName: MecabLayer
       Description: Mecab (Morphological analysis) Layer
-      ContentUri: s3://coupon-api-dev/d1aee9d5e60f3e57565c85a9d68c64d0
+      ContentUri: s3://coupon-api-dev/4c3261a71537992f71fc9613a5f196fe
       LicenseInfo: MIT
       RetentionPolicy: Delete
   CouponInfoTable:
@@ -123,3 +126,27 @@ Resources:
           WriteCapacityUnits: 5
         Projection:
           ProjectionType: KEYS_ONLY
+  GetTitleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/functions/title_index.getTitleResource
+      Runtime: python3.7
+      Policies: AmazonDynamoDBReadOnlyAccess
+      CodeUri: s3://coupon-api-dev/ee4473c88b7d9e940d765e64762d64f1
+      Timeout: 30
+      Environment:
+        Variables:
+          ENV:
+            Ref: Env
+          DYNAMODB_ENDPOINT:
+            Ref: DynamoDBEndpoint
+          TABLE_NAME_TITLE: COUPON_TITLE
+          TABLE_NAME_INFO: COUPON_INFO
+      Events:
+        GetTitleResource:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: GetApi
+            Path: /search/{titlePart}
+            Method: get
