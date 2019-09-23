@@ -45,3 +45,33 @@ def getResource(event, context):
             'isBase64Encoded': False
         }
         raise error
+
+def getListResource(event, context):
+    try:
+        dynamo_response = DYNAMODB_TABLE_INFO.scan()
+        tmp_data = dynamo_response['Items']
+        # レスポンスが1MB以上なら全体を取得するまでループ（paginationに変更予定）
+        while 'LastEvaluatedKey' in dynamo_response:
+            dynamo_response = DYNAMODB_TABLE_INFO.scan(
+                ExclusiveStartKey=response['LastEvaluatedKey']
+            )
+            tmp_data.extend(dynamo_response['Items'])
+
+        return {
+            'statusCode': 200,
+            'headers': {
+              'Content-Type': 'application/json; charset=utf-8'
+            },
+            'body': str(dynamo_response['Items']).replace("\'","\""),
+            'isBase64Encoded': False
+        }
+    except Exception as error:
+        return {
+            'statusCode': 404,
+            'headers': {
+              'Content-Type': 'application/json; charset=utf-8'
+            },
+            'body': "Not Found. The requested data is not found",
+            'isBase64Encoded': False
+        }
+        raise error

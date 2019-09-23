@@ -28,3 +28,7 @@ aws --endpoint-url=http://localhost:4569 dynamodb \
         AttributeName=coupon_info_id,KeyType=RANGE \
     --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
     --global-secondary-indexes IndexName=coupon_info_id_index,KeySchema="[{AttributeName=coupon_info_id,KeyType=HASH},{AttributeName=title_part,KeyType=RANGE}],Projection={ProjectionType=KEYS_ONLY},ProvisionedThroughput={ReadCapacityUnits=5,WriteCapacityUnits=5}"
+
+# ローカルのDynamoDB確認用
+export DYNAMO_ENDPOINT=http://localhost:4569
+dynamodb-admin

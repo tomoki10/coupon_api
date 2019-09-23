@@ -15,7 +15,7 @@ Resources:
       Handler: src/functions/index.getResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/ee4473c88b7d9e940d765e64762d64f1
+      CodeUri: s3://coupon-api-dev/7452bef6b46bf0759e25bcb75db56fca
       Timeout: 30
       Environment:
         Variables:
@@ -44,7 +44,7 @@ Resources:
       - DynamoDBCrudPolicy:
           TableName:
             Ref: CouponTitleTable
-      CodeUri: s3://coupon-api-dev/ee4473c88b7d9e940d765e64762d64f1
+      CodeUri: s3://coupon-api-dev/7452bef6b46bf0759e25bcb75db56fca
       Timeout: 30
       Environment:
         Variables:
@@ -79,7 +79,7 @@ Resources:
     Properties:
       LayerName: MecabLayer
       Description: Mecab (Morphological analysis) Layer
-      ContentUri: s3://coupon-api-dev/4c3261a71537992f71fc9613a5f196fe
+      ContentUri: s3://coupon-api-dev/044974a22ff7fd68f203f6274cf3d7cf
       LicenseInfo: MIT
       RetentionPolicy: Delete
   CouponInfoTable:
@@ -132,7 +132,7 @@ Resources:
       Handler: src/functions/title_index.getTitleResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/ee4473c88b7d9e940d765e64762d64f1
+      CodeUri: s3://coupon-api-dev/7452bef6b46bf0759e25bcb75db56fca
       Timeout: 30
       Environment:
         Variables:
@@ -149,4 +149,30 @@ Resources:
             RestApiId:
               Ref: GetApi
             Path: /search/{titlePart}
+            Method: get
+  GetListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/functions/index.getListResource
+      Runtime: python3.7
+      Policies: AmazonDynamoDBReadOnlyAccess
+      CodeUri: s3://coupon-api-dev/7452bef6b46bf0759e25bcb75db56fca
+      Timeout: 30
+      Environment:
+        Variables:
+          ENV:
+            Ref: Env
+          DYNAMODB_ENDPOINT:
+            Ref: DynamoDBEndpoint
+          TABLE_NAME_TITLE:
+            Ref: CouponTitleTable
+          TABLE_NAME_INFO:
+            Ref: CouponInfoTable
+      Events:
+        GetListResource:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: GetApi
+            Path: /
             Method: get

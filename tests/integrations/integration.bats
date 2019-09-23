@@ -5,35 +5,75 @@ setup() {
     # Docker名を指定(docker_composeファイルの場所と連動)
     docker_name='coupon_api_default'
     # テストデータを用意
-    data='{
+    info_data='{
         "id": {"S": "0001245"},
         "title": {"S": "【秋葉原店】全商品 10% OFF！"},
         "descriptive_text": {"S": "ご利用一回限り。他のクーポンとの併用はできません。クーポンをご利用いただいた場合、ポイントはつきません。"} }'
-    data_id="0001245"
+    info_data2='{
+        "id": {"S": "0000999"},
+        "title": {"S": "水道橋店限定_10円OFF"},
+        "descriptive_text": {"S": "他のクーポンとの併用可能です。"} }'
+    title_data='{
+      "title_part": {"S": "秋葉原"},
+      "coupon_info_id": {"S": "0001245"} }'
+    info_data_id="0001245"
 }
 
 teardown() {
     echo "teardown"
 }
 
+@test "DynamoDB Get Function response the all item" {
+  expected=`echo "${info_data}" | jq -r .`
+  expected2=`echo "${info_data2}" | jq -r .`
+  aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${info_data}"
+  aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${info_data2}"
+  actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/index/get_list_payload.json --env-vars environments/sam-local.json GetListFunction | jq -r .body `
+  # データ1件目の比較
+  [[ `echo "${actual}" | jq .[0].id` = `echo "${expected}" | jq .id.S` ]]
+  [[ `echo "${actual}" | jq .[0].title` = `echo "${expected}" | jq .title.S` ]]
+  [[ `echo "${actual}" | jq .[0].descriptive_text` = `echo "${expected}" | jq .descriptive_text.S` ]]
+  # データ2件目の比較
+  [[ `echo "${actual}" | jq .[1].id` = `echo "${expected2}" | jq .id.S` ]]
+  [[ `echo "${actual}" | jq .[1].title` = `echo "${expected2}" | jq .title.S` ]]
+  [[ `echo "${actual}" | jq .[1].descriptive_text` = `echo "${expected2}" | jq .descriptive_text.S` ]]
+}
+
 @test "DynamoDB Get Function response the correct item" {
 
-    expected=`echo "${data}" | jq -r .`
+    expected=`echo "${info_data}" | jq -r .`
     echo $DOCKER_NAME
     # テストデータを LocalStack の DynamoDB に投入
-    aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${data}"
+    aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${info_data}"
 
     # SAM Local を起動し、Lambda Function の出力を得る
     actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/index/get_payload.json --env-vars environments/sam-local.json GetFunction | jq -r .body `
 
-    #出力確認用コマンド
-    #echo `echo "${actual}" | jq .`
-    #echo `echo "${expected}" | jq .`
-
+    echo $actual
     # 出力内容をテスト(空白文字比較のためdouble bracket、bash,zsh,Korn shellで有効)
     [[ `echo "${actual}" | jq .id` = `echo "${expected}" | jq .id.S` ]]
     [[ `echo "${actual}" | jq .title` = `echo "${expected}" | jq .title.S` ]]
     [[ `echo "${actual}" | jq .text` = `echo "${expected}" | jq .text.S` ]]
+}
+
+@test "DynamoDB Get Title Function response the correct item" {
+    aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${info_data}"
+    aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_TITLE --item "${title_data}"
+    actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/title_index/get_payload.json --env-vars environments/sam-local.json GetTitleFunction | jq -r .body `
+
+    [[ `echo "${actual}" | jq .id` = `echo "${expected}" | jq .id.S` ]]
+    [[ `echo "${actual}" | jq .title` = `echo "${expected}" | jq .title.S` ]]
+    [[ `echo "${actual}" | jq .text` = `echo "${expected}" | jq .text.S` ]]
+}
+
+@test "DynamoDB Get Function response the error item" {
+    actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/index/error_get_payload.json --env-vars environments/sam-local.json GetFunction | jq `
+    [[ `echo "${actual}" | jq .statusCode` = 404 ]]
+}
+
+@test "DynamoDB Get Title Function response the error item" {
+    actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/title_index/error_get_payload.json --env-vars environments/sam-local.json GetTitleFunction | jq `
+    [[ `echo "${actual}" | jq .statusCode` = 404 ]]
 }
 
 @test "DynamoDB Transport Index Function correct item insert" {
@@ -66,7 +106,7 @@ teardown() {
     [[ `echo "${actual}" ` = `echo \"Done\"` ]]
 }
 
-@test "API Gateway End to End test  Get Function response" {
+@test "API Gateway End to End test Get Function response" {
     # ローカルAPI Gatewayサーバの起動
     if [ `lsof -i :4000` = "" ]; then
       sam local start-api -p 4000 -t template_coupon.yaml --docker-network ${docker_name} --env-vars environments/sam-local.json
@@ -76,12 +116,12 @@ teardown() {
       api_server_flag="OFF"
     fi
 
-    expected=`echo "${data}" | jq -r .`
+    expected=`echo "${info_data}" | jq -r .`
 
-    aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${data}"
+    aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${info_data}"
 
     # curlでレスポンスを取得
-    actual=`curl -H "Content-type: application/json" -X GET http://127.0.0.1:4000/resource/${data_id} | jq `
+    actual=`curl -H "Content-type: application/json" -X GET http://127.0.0.1:4000/resource/${info_data_id} | jq `
 
     [[ `echo "${actual}" | jq .id` = `echo "${expected}" | jq .id.S` ]]
     [[ `echo "${actual}" | jq .title` = `echo "${expected}" | jq .title.S` ]]
