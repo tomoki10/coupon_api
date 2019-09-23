@@ -35,4 +35,13 @@ def getResource(event, context):
             'isBase64Encoded': False
         }
     except Exception as error:
+        id = event['pathParameters']['resourceId']
+        return {
+            'statusCode': 404,
+            'headers': {
+              'Content-Type': 'application/json; charset=utf-8'
+            },
+            'body': "Not Found. The requested id "+str(id)+" is not found",
+            'isBase64Encoded': False
+        }
         raise error

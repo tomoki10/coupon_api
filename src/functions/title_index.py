@@ -28,7 +28,11 @@ def getTitleResource(event, context):
         title_response = DYNAMODB_TABLE_TITLE.query(
             KeyConditionExpression=Key('title_part').eq(req_title_part)
         )
-        print(title_response)
+        print(title_response['Count'])
+        # 取得対象がない場合は403で返す
+        if title_response['Count'] == 0 :
+            raise ValueError("error")
+
         response = []
         for res in title_response['Items']:
             #print(res['coupon_info_id'])
@@ -36,7 +40,7 @@ def getTitleResource(event, context):
                 KeyConditionExpression=Key('id').eq(res['coupon_info_id'])
             )
             print(info_response['Items'][0]['title'])
-            response.append(info_response['Items'][0]['title'])
+            response.append(info_response['Items'][0])
 
         return {
             'statusCode': 200,
@@ -47,4 +51,13 @@ def getTitleResource(event, context):
             'isBase64Encoded': False
         }
     except Exception as error:
+        req_title_part = event['pathParameters']['titlePart']
+        return {
+            'statusCode': 404,
+            'headers': {
+              'Content-Type': 'application/json; charset=utf-8'
+            },
+            'body': "Not Found. The requested title "+str(req_title_part)+" is not found",
+            'isBase64Encoded': False
+        }
         raise error
