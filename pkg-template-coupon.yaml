@@ -8,6 +8,9 @@ Parameters:
   DynamoDBEndpoint:
     Type: String
     Default: https://dynamodb.ap-northeast-1.amazonaws.com/
+  S3BucketName:
+    Type: String
+    Default: coupon-api-dev
 Resources:
   GetFunction:
     Type: AWS::Serverless::Function
@@ -15,7 +18,7 @@ Resources:
       Handler: src/functions/index.getResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/7452bef6b46bf0759e25bcb75db56fca
+      CodeUri: s3://coupon-api-dev/186c1b08ed2a25d73f25f33c058aa796
       Timeout: 30
       Environment:
         Variables:
@@ -44,7 +47,7 @@ Resources:
       - DynamoDBCrudPolicy:
           TableName:
             Ref: CouponTitleTable
-      CodeUri: s3://coupon-api-dev/7452bef6b46bf0759e25bcb75db56fca
+      CodeUri: s3://coupon-api-dev/186c1b08ed2a25d73f25f33c058aa796
       Timeout: 30
       Environment:
         Variables:
@@ -79,7 +82,7 @@ Resources:
     Properties:
       LayerName: MecabLayer
       Description: Mecab (Morphological analysis) Layer
-      ContentUri: s3://coupon-api-dev/044974a22ff7fd68f203f6274cf3d7cf
+      ContentUri: s3://coupon-api-dev/80a60b8c9b49799a4702f0de98eaa2d1
       LicenseInfo: MIT
       RetentionPolicy: Delete
   CouponInfoTable:
@@ -132,7 +135,7 @@ Resources:
       Handler: src/functions/title_index.getTitleResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/7452bef6b46bf0759e25bcb75db56fca
+      CodeUri: s3://coupon-api-dev/186c1b08ed2a25d73f25f33c058aa796
       Timeout: 30
       Environment:
         Variables:
@@ -156,7 +159,7 @@ Resources:
       Handler: src/functions/index.getListResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/7452bef6b46bf0759e25bcb75db56fca
+      CodeUri: s3://coupon-api-dev/186c1b08ed2a25d73f25f33c058aa796
       Timeout: 30
       Environment:
         Variables:
@@ -176,3 +179,27 @@ Resources:
               Ref: GetApi
             Path: /
             Method: get
+  DataImportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/functions/data_import.dataImport
+      Runtime: python3.7
+      Policies:
+      - S3CrudPolicy:
+          BucketName:
+            Ref: S3BucketName
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: CouponInfoTable
+      CodeUri: s3://coupon-api-dev/186c1b08ed2a25d73f25f33c058aa796
+      Timeout: 30
+      Environment:
+        Variables:
+          ENV:
+            Ref: Env
+          DYNAMODB_ENDPOINT:
+            Ref: DynamoDBEndpoint
+          TABLE_NAME_TITLE:
+            Ref: CouponTitleTable
+          TABLE_NAME_INFO:
+            Ref: CouponInfoTable
