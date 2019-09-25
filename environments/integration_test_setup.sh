@@ -1,7 +1,9 @@
 #!/bin/sh
 
+cd ..
+
 # ローカルテスト用のDockerを起動
-docker-compose -f ../docker-compose.yaml up -d
+docker-compose -f docker-compose.yaml up -d
 
 mkdir deploy
 rsync -a src deploy --exclude 'layer'
