@@ -8,11 +8,15 @@ setup() {
     info_data='{
         "id": {"S": "0001245"},
         "title": {"S": "【秋葉原店】全商品 10% OFF！"},
-        "descriptive_text": {"S": "ご利用一回限り。他のクーポンとの併用はできません。クーポンをご利用いただいた場合、ポイントはつきません。"} }'
+        "descriptive_text": {"S": "ご利用一回限り。他のクーポンとの併用はできません。クーポンをご利用いただいた場合、ポイントはつきません。"} ,
+        "updated_at": {"S":"1569430072"},
+        "coupon_type": {"S":"org_aws"} }'
     info_data2='{
         "id": {"S": "0000999"},
         "title": {"S": "水道橋店限定_10円OFF"},
-        "descriptive_text": {"S": "他のクーポンとの併用可能です。"} }'
+        "descriptive_text": {"S": "他のクーポンとの併用可能です。"},
+        "updated_at": {"S":"1569430071"},
+        "coupon_type": {"S":"org_aws"} }'
     title_data='{
       "title_part": {"S": "秋葉原"},
       "coupon_info_id": {"S": "0001245"} }'
@@ -131,4 +135,12 @@ teardown() {
     if [ api_server_flag="ON" ]; then
       ps ax | grep 'sam local start-api -p 4000' | grep -v grep | cut -f1 -d " " | xargs kill -9
     fi
+}
+
+@test "S3 Data Import Test" {
+  # S3にファイルをアップロード(ローカルでテストできるように修正が必要)
+  aws s3 cp tests/integrations/coupon.csv s3://coupon-api-dev/import-file/coupon.csv
+  # SAM local 実行のため適当なEventを指定して実行
+  actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/index/get_list_payload.json --env-vars environments/sam-local.json DataImportFunction`
+  [[ `echo "${actual}" ` = `echo \"Done\"` ]]
 }
