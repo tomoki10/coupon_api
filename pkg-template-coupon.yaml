@@ -17,8 +17,11 @@ Resources:
     Properties:
       Handler: src/functions/index.getResource
       Runtime: python3.7
-      Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: CouponInfoTable
+      CodeUri: s3://coupon-api-dev/21738d80f8db8e80536d6a085c928032
       Timeout: 30
       Environment:
         Variables:
@@ -47,7 +50,7 @@ Resources:
       - DynamoDBCrudPolicy:
           TableName:
             Ref: CouponTitleTable
-      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
+      CodeUri: s3://coupon-api-dev/21738d80f8db8e80536d6a085c928032
       Timeout: 30
       Environment:
         Variables:
@@ -82,8 +85,8 @@ Resources:
     Properties:
       LayerName: MecabLayer
       Description: Mecab (Morphological analysis) Layer
-      ContentUri: s3://coupon-api-dev/93988ed203720f27f1813e04735df816
-      LicenseInfo: MIT
+      ContentUri: s3://coupon-api-dev/d2dea17458369c67a53bdc920bdc6b78
+      LicenseInfo: 3-clause BSD license
       RetentionPolicy: Delete
   CouponInfoTable:
     Type: AWS::DynamoDB::Table
@@ -150,8 +153,14 @@ Resources:
     Properties:
       Handler: src/functions/title_index.getTitleResource
       Runtime: python3.7
-      Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: CouponInfoTable
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: CouponTitleTable
+      CodeUri: s3://coupon-api-dev/21738d80f8db8e80536d6a085c928032
       Timeout: 30
       Environment:
         Variables:
@@ -174,8 +183,11 @@ Resources:
     Properties:
       Handler: src/functions/index.getListResource
       Runtime: python3.7
-      Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: CouponInfoTable
+      CodeUri: s3://coupon-api-dev/21738d80f8db8e80536d6a085c928032
       Timeout: 30
       Environment:
         Variables:
@@ -214,7 +226,7 @@ Resources:
       - DynamoDBCrudPolicy:
           TableName:
             Ref: CouponInfoTable
-      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
+      CodeUri: s3://coupon-api-dev/21738d80f8db8e80536d6a085c928032
       Timeout: 30
       Environment:
         Variables:

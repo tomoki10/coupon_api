@@ -1,0 +1,224 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Coupon Infomation GET API.
+Parameters:
+  Env:
+    Type: String
+    Default: local
+  DynamoDBEndpoint:
+      Type: String
+      Default: https://dynamodb.ap-northeast-1.amazonaws.com/
+  S3BucketName:
+    Type: String
+    Default: coupon-api-dev
+Resources:
+  # ID指定検索用
+  GetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/functions/index.getResource
+      Runtime: python3.7
+      Policies:
+        - DynamoDBReadPolicy:
+             TableName: !Ref CouponInfoTable
+      CodeUri: deploy
+      Timeout: 30
+      Environment:
+        Variables:
+          ENV: !Ref Env
+          DYNAMODB_ENDPOINT: !Ref DynamoDBEndpoint
+          TABLE_NAME_TITLE: !Ref CouponTitleTable
+          TABLE_NAME_INFO: !Ref CouponInfoTable
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GetApi
+            Path: /resource/{resourceId}
+            Method: get
+  # 転置インデックス用テーブルへのデータ挿入
+  TransportTablePutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/functions/transport.putTitle
+      Runtime: python3.7
+      #DynamoDB Stream経由でのLambda実行の許可
+      Policies:
+        - DynamoDBCrudPolicy:
+             TableName: !Ref CouponTitleTable
+      CodeUri: deploy
+      Timeout: 30
+      Environment:
+        Variables:
+          ENV: !Ref Env
+          DYNAMODB_ENDPOINT: !Ref DynamoDBEndpoint
+          TABLE_NAME_TITLE: !Ref CouponTitleTable
+          TABLE_NAME_INFO: !Ref CouponInfoTable
+      Events:
+        PutTitle:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt CouponInfoTable.StreamArn
+            StartingPosition: LATEST
+            BatchSize: 1
+            Enabled: true
+      Layers:
+        - !Ref TransportLambdaLayer
+  GetApi:
+    Type: 'AWS::Serverless::Api'
+    Properties:
+      StageName: prod
+      #CanarySetting
+      #  PercentTraffic: 40
+      TracingEnabled: true # X-Ray traceの有効化
+      #CacheClusterEnabled: true # cache指定
+      #CacheClusterSize: '0.5' # cacheサイズGB単位
+  # MecabをLambda Layerに設定
+  TransportLambdaLayer:
+    Type: 'AWS::Serverless::LayerVersion'
+    Properties:
+      LayerName: MecabLayer
+      Description: Mecab (Morphological analysis) Layer
+      ContentUri: deploylayer
+      LicenseInfo: '3-clause BSD license'
+      RetentionPolicy: Delete
+  # StreamやGSIのためSimpleTableでなくCloudformationで記載
+  CouponInfoTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: COUPON_INFO
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: updated_at
+          AttributeType: S
+        - AttributeName: coupon_type
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      # Queryでupdate_atが最新の情報から取得するために設定
+      GlobalSecondaryIndexes:
+        - IndexName: "update_at_index"
+          KeySchema:
+            - AttributeName: coupon_type
+              KeyType: HASH
+            - AttributeName: updated_at
+              KeyType: RANGE
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+          Projection:
+            ProjectionType: ALL
+      # ストリーム許可
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+  # 転置インデックステーブル
+  CouponTitleTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: COUPON_TITLE
+      AttributeDefinitions:
+        - AttributeName: title_part
+          AttributeType: S
+        - AttributeName: coupon_info_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: title_part
+          KeyType: HASH
+        - AttributeName: coupon_info_id
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      # 転置インデックス作成元のテーブルからデータが削除された場合に、連動してデータを削除するために設定
+      GlobalSecondaryIndexes:
+        - IndexName: "coupon_info_id_index"
+          KeySchema:
+            - AttributeName: coupon_info_id
+              KeyType: HASH
+            - AttributeName: title_part
+              KeyType: RANGE
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+          Projection:
+            ProjectionType: KEYS_ONLY
+  # タイトルの指定ワード検索用
+  GetTitleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/functions/title_index.getTitleResource
+      Runtime: python3.7
+      Policies:
+        - DynamoDBReadPolicy:
+             TableName: !Ref CouponInfoTable
+        - DynamoDBReadPolicy:
+             TableName: !Ref CouponTitleTable
+      CodeUri: deploy
+      Timeout: 30
+      Environment:
+        Variables:
+          ENV: !Ref Env
+          DYNAMODB_ENDPOINT: !Ref DynamoDBEndpoint
+          TABLE_NAME_TITLE: COUPON_TITLE
+          TABLE_NAME_INFO: COUPON_INFO
+      Events:
+        GetTitleResource:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GetApi
+            Path: /search/{titlePart}
+            Method: get
+  # 一覧情報取得
+  GetListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/functions/index.getListResource
+      Runtime: python3.7
+      Policies:
+        - DynamoDBReadPolicy:
+             TableName: !Ref CouponInfoTable
+      CodeUri: deploy
+      Timeout: 30
+      Environment:
+        Variables:
+          ENV: !Ref Env
+          DYNAMODB_ENDPOINT: !Ref DynamoDBEndpoint
+          TABLE_NAME_TITLE: !Ref CouponTitleTable
+          TABLE_NAME_INFO: !Ref CouponInfoTable
+      Events:
+        GetFirstListResource:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GetApi
+            Path: /resource-list
+            Method: get
+        GetNextListResource:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GetApi
+            Path: /resource-list/{lastEvaluatedKey}
+            Method: get
+  # データ投入用
+  DataImportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/functions/data_import.dataImport
+      Runtime: python3.7
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref S3BucketName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CouponInfoTable
+      CodeUri: deploy
+      Timeout: 30
+      Environment:
+        Variables:
+          ENV: !Ref Env
+          DYNAMODB_ENDPOINT: !Ref DynamoDBEndpoint
+          TABLE_NAME_TITLE: !Ref CouponTitleTable
+          TABLE_NAME_INFO: !Ref CouponInfoTable
