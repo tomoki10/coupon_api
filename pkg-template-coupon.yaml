@@ -18,7 +18,7 @@ Resources:
       Handler: src/functions/index.getResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/37ccf87034a6ec6d7c656ebf1a99e138
+      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
       Timeout: 30
       Environment:
         Variables:
@@ -47,7 +47,7 @@ Resources:
       - DynamoDBCrudPolicy:
           TableName:
             Ref: CouponTitleTable
-      CodeUri: s3://coupon-api-dev/37ccf87034a6ec6d7c656ebf1a99e138
+      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
       Timeout: 30
       Environment:
         Variables:
@@ -82,7 +82,7 @@ Resources:
     Properties:
       LayerName: MecabLayer
       Description: Mecab (Morphological analysis) Layer
-      ContentUri: s3://coupon-api-dev/f5214ff741ebdbab86d339c25b1b6a46
+      ContentUri: s3://coupon-api-dev/93988ed203720f27f1813e04735df816
       LicenseInfo: MIT
       RetentionPolicy: Delete
   CouponInfoTable:
@@ -151,7 +151,7 @@ Resources:
       Handler: src/functions/title_index.getTitleResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/37ccf87034a6ec6d7c656ebf1a99e138
+      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
       Timeout: 30
       Environment:
         Variables:
@@ -175,7 +175,7 @@ Resources:
       Handler: src/functions/index.getListResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/37ccf87034a6ec6d7c656ebf1a99e138
+      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
       Timeout: 30
       Environment:
         Variables:
@@ -188,12 +188,19 @@ Resources:
           TABLE_NAME_INFO:
             Ref: CouponInfoTable
       Events:
-        GetListResource:
+        GetFirstListResource:
           Type: Api
           Properties:
             RestApiId:
               Ref: GetApi
-            Path: /
+            Path: /resource-list
+            Method: get
+        GetNextListResource:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: GetApi
+            Path: /resource-list/{lastEvaluatedKey}
             Method: get
   DataImportFunction:
     Type: AWS::Serverless::Function
@@ -207,7 +214,7 @@ Resources:
       - DynamoDBCrudPolicy:
           TableName:
             Ref: CouponInfoTable
-      CodeUri: s3://coupon-api-dev/37ccf87034a6ec6d7c656ebf1a99e138
+      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
       Timeout: 30
       Environment:
         Variables:

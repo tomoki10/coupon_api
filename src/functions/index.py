@@ -17,6 +17,9 @@ DYNAMO = boto3.resource(
 DYNAMODB_TABLE_INFO = DYNAMO.Table(TABLE_NAME_INFO)
 DYNAMODB_TABLE_TITLE = DYNAMO.Table(TABLE_NAME_TITLE)
 
+# 一回のリクエストで取得するデータの上限
+PAGE_LIST_LIMIT = 5
+
 def getResource(event, context):
     try:
         id = event['pathParameters']['resourceId']
@@ -48,21 +51,27 @@ def getResource(event, context):
 
 def getListResource(event, context):
     try:
-        dynamo_response = DYNAMODB_TABLE_INFO.scan()
-        tmp_data = dynamo_response['Items']
-        # レスポンスが1MB以上なら全体を取得するまでループ（paginationに変更予定）
-        while 'LastEvaluatedKey' in dynamo_response:
-            dynamo_response = DYNAMODB_TABLE_INFO.scan(
-                ExclusiveStartKey=response['LastEvaluatedKey']
+        param = {
+            'IndexName': 'update_at_index',
+            'KeyConditionExpression': Key('coupon_type').eq('org_aws'),
+            'ScanIndexForward': False,
+            'Limit': PAGE_LIST_LIMIT
+        }
+        path_param = event['pathParameters']
+        if path_param != None:
+            input_key = json.loads(
+                event['pathParameters']['lastEvaluatedKey'].replace("\'","\"")
             )
-            tmp_data.extend(dynamo_response['Items'])
+            param['ExclusiveStartKey'] = input_key
+        #アンパックして検索
+        dynamo_response = DYNAMODB_TABLE_INFO.query(**param)
 
         return {
             'statusCode': 200,
             'headers': {
               'Content-Type': 'application/json; charset=utf-8'
             },
-            'body': str(dynamo_response['Items']).replace("\'","\""),
+            'body': str(dynamo_response).replace("\'","\""),
             'isBase64Encoded': False
         }
     except Exception as error:
