@@ -1,4 +1,5 @@
 #!/usr/bin/env bats
+api_server_flag="OFF"
 
 setup() {
     echo "setup"
@@ -8,11 +9,15 @@ setup() {
     info_data='{
         "id": {"S": "0001245"},
         "title": {"S": "【秋葉原店】全商品 10% OFF！"},
-        "descriptive_text": {"S": "ご利用一回限り。他のクーポンとの併用はできません。クーポンをご利用いただいた場合、ポイントはつきません。"} }'
+        "descriptive_text": {"S": "ご利用一回限り。他のクーポンとの併用はできません。クーポンをご利用いただいた場合、ポイントはつきません。"} ,
+        "updated_at": {"S":"1569430072"},
+        "coupon_type": {"S":"org_aws"} }'
     info_data2='{
         "id": {"S": "0000999"},
         "title": {"S": "水道橋店限定_10円OFF"},
-        "descriptive_text": {"S": "他のクーポンとの併用可能です。"} }'
+        "descriptive_text": {"S": "他のクーポンとの併用可能です。"},
+        "updated_at": {"S":"1569430071"},
+        "coupon_type": {"S":"org_aws"} }'
     title_data='{
       "title_part": {"S": "秋葉原"},
       "coupon_info_id": {"S": "0001245"} }'
@@ -21,22 +26,6 @@ setup() {
 
 teardown() {
     echo "teardown"
-}
-
-@test "DynamoDB Get Function response the all item" {
-  expected=`echo "${info_data}" | jq -r .`
-  expected2=`echo "${info_data2}" | jq -r .`
-  aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${info_data}"
-  aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${info_data2}"
-  actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/index/get_list_payload.json --env-vars environments/sam-local.json GetListFunction | jq -r .body `
-  # データ1件目の比較
-  [[ `echo "${actual}" | jq .[0].id` = `echo "${expected}" | jq .id.S` ]]
-  [[ `echo "${actual}" | jq .[0].title` = `echo "${expected}" | jq .title.S` ]]
-  [[ `echo "${actual}" | jq .[0].descriptive_text` = `echo "${expected}" | jq .descriptive_text.S` ]]
-  # データ2件目の比較
-  [[ `echo "${actual}" | jq .[1].id` = `echo "${expected2}" | jq .id.S` ]]
-  [[ `echo "${actual}" | jq .[1].title` = `echo "${expected2}" | jq .title.S` ]]
-  [[ `echo "${actual}" | jq .[1].descriptive_text` = `echo "${expected2}" | jq .descriptive_text.S` ]]
 }
 
 @test "DynamoDB Get Function response the correct item" {
@@ -109,13 +98,12 @@ teardown() {
 @test "API Gateway End to End test Get Function response" {
     # ローカルAPI Gatewayサーバの起動
     if [ `lsof -i :4000` = "" ]; then
-      sam local start-api -p 4000 -t template_coupon.yaml --docker-network ${docker_name} --env-vars environments/sam-local.json
-      api_server_flag="ON"
+        sam local start-api -p 4000 -t template_coupon.yaml --docker-network ${docker_name} --env-vars environments/sam-local.json
+        api_server_flag="ON"
     else
-      echo "Please Stop the process of port 4000: port check ex(MaxOS). lsof -i :4000"
-      api_server_flag="OFF"
+        echo "Please Stop the process of port 4000: port check ex(MaxOS). lsof -i :4000"
+        api_server_flag="OFF"
     fi
-
     expected=`echo "${info_data}" | jq -r .`
 
     aws --endpoint-url=http://localhost:4569 dynamodb put-item --table-name COUPON_INFO --item "${info_data}"
@@ -129,6 +117,43 @@ teardown() {
 
     # APIサーバを終了
     if [ api_server_flag="ON" ]; then
-      ps ax | grep 'sam local start-api -p 4000' | grep -v grep | cut -f1 -d " " | xargs kill -9
+        ps ax | grep 'sam local start-api -p 4000' | grep -v grep | cut -f1 -d " " | xargs kill -9
+    fi
+}
+
+@test "S3 Data Import Test" {
+    # S3にファイルをアップロード(ローカルでテストできるように修正が必要)
+    aws s3 cp tests/integrations/coupon.csv s3://coupon-api-dev/import-file/coupon.csv
+    # SAM local 実行のため適当なEventを指定して実行
+    actual=`sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/index/get_list_payload.json --env-vars environments/sam-local.json DataImportFunction`
+    [[ `echo "${actual}" ` = `echo \"Done\"` ]]
+}
+
+@test "API Gateway Pagenation Request" {
+    # ローカルAPI Gatewayサーバの起動
+    if [ `lsof -i :4000` = "" ]; then
+        sam local start-api -p 4000 -t template_coupon.yaml --docker-network ${docker_name} --env-vars environments/sam-local.json
+        api_server_flag="ON"
+    else
+        echo "Please Stop the process of port 4000: port check ex(MaxOS). lsof -i :4000"
+        api_server_flag="OFF"
+    fi
+    # PAGE_LIST_LIMITに設定した値以上のデータをDynamoDBに投入する
+    aws s3 cp tests/integrations/coupon.csv s3://coupon-api-dev/import-file/coupon.csv
+    sam local invoke --docker-network ${docker_name} -t template_coupon.yaml --event tests/integrations/index/get_list_payload.json --env-vars environments/sam-local.json DataImportFunction
+
+    # １度目のデータ取得
+    actual=`curl -H "Content-type: application/json" -X GET http://127.0.0.1:4000/resource-list | jq -r .LastEvaluatedKey`
+
+    # URLエンコード
+    nextval=`echo ${actual}| nkf -WwMQ | sed 's/=$//g' | tr = % | tr -d '\n'`
+    # 2度目のデータ取得
+    echo $nextval
+    next_actual=`curl -H "Content-type: application/json" -X GET http://127.0.0.1:4000/resource-list/${nextval} | jq -r .ResponseMetadata.HTTPStatusCode`
+
+    [[ `echo "${next_actual}" ` = `echo 200` ]]
+    # APIサーバを終了
+    if [ api_server_flag="ON" ]; then
+        ps ax | grep 'sam local start-api -p 4000' | grep -v grep | cut -f1 -d " " | xargs kill -9
     fi
 }

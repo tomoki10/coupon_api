@@ -16,8 +16,11 @@ aws --endpoint-url=http://localhost:4569 dynamodb \
     create-table --table-name  COUPON_INFO \
     --attribute-definitions \
         AttributeName=id,AttributeType=S \
+        AttributeName=updated_at,AttributeType=S \
+        AttributeName=coupon_type,AttributeType=S \
     --key-schema AttributeName=id,KeyType=HASH \
-    --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5
+    --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
+    --global-secondary-indexes IndexName=update_at_index,KeySchema="[{AttributeName=coupon_type,KeyType=HASH},{AttributeName=updated_at,KeyType=RANGE}],Projection={ProjectionType=ALL},ProvisionedThroughput={ReadCapacityUnits=5,WriteCapacityUnits=5}"
 
 # 擬似の転置インデックステーブルを作成
 aws --endpoint-url=http://localhost:4569 dynamodb \

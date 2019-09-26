@@ -18,7 +18,7 @@ Resources:
       Handler: src/functions/index.getResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/186c1b08ed2a25d73f25f33c058aa796
+      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
       Timeout: 30
       Environment:
         Variables:
@@ -47,7 +47,7 @@ Resources:
       - DynamoDBCrudPolicy:
           TableName:
             Ref: CouponTitleTable
-      CodeUri: s3://coupon-api-dev/186c1b08ed2a25d73f25f33c058aa796
+      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
       Timeout: 30
       Environment:
         Variables:
@@ -82,7 +82,7 @@ Resources:
     Properties:
       LayerName: MecabLayer
       Description: Mecab (Morphological analysis) Layer
-      ContentUri: s3://coupon-api-dev/80a60b8c9b49799a4702f0de98eaa2d1
+      ContentUri: s3://coupon-api-dev/93988ed203720f27f1813e04735df816
       LicenseInfo: MIT
       RetentionPolicy: Delete
   CouponInfoTable:
@@ -92,12 +92,28 @@ Resources:
       AttributeDefinitions:
       - AttributeName: id
         AttributeType: S
+      - AttributeName: updated_at
+        AttributeType: S
+      - AttributeName: coupon_type
+        AttributeType: S
       KeySchema:
       - AttributeName: id
         KeyType: HASH
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
+      GlobalSecondaryIndexes:
+      - IndexName: update_at_index
+        KeySchema:
+        - AttributeName: coupon_type
+          KeyType: HASH
+        - AttributeName: updated_at
+          KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        Projection:
+          ProjectionType: ALL
       StreamSpecification:
         StreamViewType: NEW_IMAGE
   CouponTitleTable:
@@ -135,7 +151,7 @@ Resources:
       Handler: src/functions/title_index.getTitleResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/186c1b08ed2a25d73f25f33c058aa796
+      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
       Timeout: 30
       Environment:
         Variables:
@@ -159,7 +175,7 @@ Resources:
       Handler: src/functions/index.getListResource
       Runtime: python3.7
       Policies: AmazonDynamoDBReadOnlyAccess
-      CodeUri: s3://coupon-api-dev/186c1b08ed2a25d73f25f33c058aa796
+      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
       Timeout: 30
       Environment:
         Variables:
@@ -172,12 +188,19 @@ Resources:
           TABLE_NAME_INFO:
             Ref: CouponInfoTable
       Events:
-        GetListResource:
+        GetFirstListResource:
           Type: Api
           Properties:
             RestApiId:
               Ref: GetApi
-            Path: /
+            Path: /resource-list
+            Method: get
+        GetNextListResource:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: GetApi
+            Path: /resource-list/{lastEvaluatedKey}
             Method: get
   DataImportFunction:
     Type: AWS::Serverless::Function
@@ -191,7 +214,7 @@ Resources:
       - DynamoDBCrudPolicy:
           TableName:
             Ref: CouponInfoTable
-      CodeUri: s3://coupon-api-dev/186c1b08ed2a25d73f25f33c058aa796
+      CodeUri: s3://coupon-api-dev/e3df6db25883005a8a788d0c90c6a310
       Timeout: 30
       Environment:
         Variables:

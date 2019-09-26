@@ -1,6 +1,3 @@
 {
-  "pathParameters" :
-  {
-    "resourceId":""
-  }
+  "pathParameters" :null
 }
